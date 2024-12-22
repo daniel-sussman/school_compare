@@ -144,7 +144,7 @@ public class SchoolsController {
                                     @RequestParam(value = "view", defaultValue = "questions") String view,
                                     @RequestParam(value = "sort_by", defaultValue = "relevance") String sortBy) {
 
-        ModelAndView modelAndView = new ModelAndView("/users/profile");
+        ModelAndView modelAndView = new ModelAndView("users/profile");
 
         // Get the current user's ID from the session
         Long currentUserId = (Long) session.getAttribute("userId");

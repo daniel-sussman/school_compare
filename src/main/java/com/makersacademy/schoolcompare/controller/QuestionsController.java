@@ -42,19 +42,4 @@ public class QuestionsController {
         repository.save(question);
         return new RedirectView("/schools/" + question.getSchoolId() );
     }
-
-    @GetMapping("schools/{school}/questions/{questionId}")
-    public ModelAndView showQuestion(@PathVariable("school") Long schoolId, @PathVariable("questionId") Long questionId) {
-        ModelAndView modelAndView = new ModelAndView("/questions/show-question");
-        Optional<Question> question = repository.findById(questionId);
-        if (question.isPresent()) {
-            Question q = question.get();
-            modelAndView.addObject("question", q);
-            User u = userRepository.findById(q.getUserId()).get();
-            modelAndView.addObject("username", u.getUsername());
-        }
-        return modelAndView;
-    }
-
-
 }

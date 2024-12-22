@@ -85,7 +85,7 @@ public class SchoolsController {
             @RequestParam(value = "view", defaultValue = "questions") String view,
             @RequestParam(value = "sort_by", defaultValue = "relevance") String sortBy,
             HttpSession session) {
-        ModelAndView model = new ModelAndView("/schools/show");
+        ModelAndView model = new ModelAndView("schools/show");
         School school = repository.findById(id).orElseThrow();
         Long currentUser = (Long) session.getAttribute("userId");
         ReviewWithData topReview = reviewRepository.findTopReview(school.getId(), currentUser);

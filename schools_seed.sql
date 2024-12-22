@@ -1,4 +1,3 @@
--- This is a very abbreviated seed. Will vastly expand it later, but wanted to test with just a few schools.
 DELETE FROM schools;
 
 INSERT INTO schools (name, address, longitude, latitude, catchment_radius, ofsted_rating, ofsted_url, type, gender, sen_availability, religious_affiliation, website)

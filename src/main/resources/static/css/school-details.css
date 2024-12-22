@@ -1,0 +1,287 @@
+.page-body {
+    display: flex;
+}
+
+.page-body > div {
+    min-height: calc(100vh - 104px);
+}
+
+/* INFO */
+#school-info {
+    background-color: var(--white);
+    width: 624px;
+    min-width: 624px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+}
+
+#back-button {
+    position: absolute;
+    color: var(--deep-blue);
+    top: 32px;
+    left: 8px;
+    font-size: 20px;
+}
+
+#school-like {
+    position: absolute;
+    color: var(--deep-blue);
+    top: 32px;
+    right: 32px;
+}
+
+.input-submit > i.fa-bookmark {
+    color: var(--deep-blue) !important;
+    font-size: 28px !important;
+}
+
+.info-name {
+    color: var(--deep-blue);
+}
+
+.info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#top-review {
+    background-color: var(--parchment);
+    width: 100%;
+    padding: 16px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+#top-review h5 {
+    margin: 8px 0;
+}
+
+#distance-info {
+    margin-bottom: 8px;
+}
+
+#catchment-table {
+    width: 100%;
+    background-color: var(--parchment);
+    border-radius: 8px;
+    border-spacing: 0;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+#catchment-table th, #catchment-table td {
+    border: solid var(--grey-blue);
+    padding: 8px;
+    text-align: center;
+    border-width: 1px 0 0 1px;
+}
+
+#catchment-table th {
+    border-top-width: 0;
+}
+
+#catchment-table th:first-child, #catchment-table td:first-child {
+    border-left-width: 0;
+}
+
+#school-website a {
+    color: var(--deep-blue);
+    text-decoration: underline;
+}
+
+#nearby-schools {
+    width: 100%;
+    background-color: var(--parchment);
+    padding: 32px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.nearby-school {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.action-button:hover + div {
+    color: var(--grey-blue) !important;
+}
+
+/* FORUM */
+#school-forum {
+    background-color: var(--salmon);
+    max-width: calc(100vw - 624px);
+    flex-grow: 1;
+    box-sizing: border-box;
+}
+
+#forum-container {
+    padding: 32px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#forum-options {
+    display: flex;
+    gap: 16px;
+}
+
+#forum-options > div {
+    flex-grow: 1;
+    display: flex;
+    color: var(--dark-text);
+    background-color: var(--parchment);
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+#forum-options .options {
+    display: flex;
+    justify-content: space-evenly;
+    flex-grow: 2;
+}
+
+/* CARDS */
+.card {
+    border-radius: 8px;
+    background-color: var(--white);
+    padding: 32px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+.input-card {
+    border-radius: 8px;
+    background-color: var(--white);
+    padding: 12px 16px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25);
+    display: flex;
+    gap: 24px;
+}
+.input-card-expanded {
+    flex-direction: column;
+    gap: 8px !important;
+}
+.input-submit-line {
+    display: flex;
+    gap: 24px;
+}
+
+/* ANSWERS */
+.answers-container {
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--grey-blue);
+    position: relative;
+    margin-top: 16px;
+}
+
+.answer-input {
+    border-radius: 8px;
+    padding: 12px 16px;
+    border: 1px dashed var(--grey-blue);
+    display: flex;
+    gap: 24px;
+    margin: 24px 0;
+}
+
+.more-answers {
+    margin-top: 24px;
+}
+
+.more-answers > :first-child {
+    margin-bottom: 16px;
+}
+
+.expand-down {
+    border: none;
+    margin: 0;
+    padding: 0;
+    background-color: transparent;
+    cursor: pointer;
+    color: var(--action-red);
+    position: absolute;
+    right: 0;
+    bottom: 0;
+}
+
+/* QUESTIONS */
+.questions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.new-question-input{
+    flex-grow: 1;
+    border-radius: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--grey-blue);
+    color: var(--dark-blue);
+}
+.new-question-input::placeholder {
+    color: var(--grey-blue);
+}
+.input-submit {
+    border: none;
+    margin: 0;
+    padding: 0;
+    background-color: transparent;
+    cursor: pointer;
+}
+.rotated-icon {
+    transform: rotate(-90deg) scaleX(-1);
+    margin-right: 8px;
+}
+.input-submit > i {
+    font-size: 24px;
+    color: var(--action-red);
+}
+.like-icon {
+    position: absolute;
+    top: 32px;
+    right: 32px;
+}
+
+ /* ANSWERS */
+.upvote-icon {
+     position: absolute;
+     top: 0;
+     right: 0;
+     display: flex;
+     align-items: center;
+     gap: 4px;
+}
+.upvote-icon > h5 {
+    color: var(--dark-text);
+}
+.fa-caret-up {
+    transform: scale(1, 1.26) translateY(2px) !important;
+}
+.fa-caret-down {
+    transform: scale(1, 1.26) translateY(-2px) !important;
+}
+.answer-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.post-element {
+     position: relative;
+     display: flex;
+     flex-direction: column;
+     gap: 8px;
+ }

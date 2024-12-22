@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity5" >
+<head>
+    <th:block th:replace="~{core/head :: head}"></th:block>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link rel="stylesheet" href="/css/map.css" />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css" rel="stylesheet">
+    <link
+            rel="stylesheet"
+            href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1-dev/mapbox-gl-geocoder.css"
+            type="text/css"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.1-dev/mapbox-gl-geocoder.min.js"></script>
+    <script src="https://npmcdn.com/@turf/turf/turf.min.js"></script>
+</head>
+<body>
+    <nav th:replace="~{core/navbar :: div}"></nav>
+    <div id="map-container">
+        <div id="map" th:data-mapbox-token="${mapboxToken}"></div>
+        <div class="map-filters">
+            <h3 class="filter-header">Filter schools by...</h3>
+            <form id="filter-options">
+                <div class="filter-option">
+                    <label for="ages">Ages: </label>
+                    <select name="ages" id="ages">
+                        <option value="all" selected="">All</option>
+                        <option value="primary">Primary</option>
+                        <option value="secondary">Secondary</option>
+                        <option value="sixth_form">Sixth-Form</option>
+                    </select>
+                </div>
+                <div class="filter-option">
+                    <label for="gender">Gender: </label>
+                    <select name="gender" id="gender">
+                        <option value="any" selected="">Any</option>
+                        <option value="mixed">Mixed</option>
+                        <option value="boys">Boys</option>
+                        <option value="girls">Girls</option>
+                    </select>
+                </div>
+
+                <div class="filter-option">
+                    <label for="ofsted-rating">Min. Rating: </label>
+                    <select name="ofsted_rating" id="ofsted-rating">
+                        <option value="0" selected="">None</option>
+                        <option value="4">Outstanding</option>
+                        <option value="3">Good</option>
+                        <option value="2">Requires Improvement</option>
+                        <option value="1">Inadequate</option>
+                    </select>
+                </div>
+
+                <div class="filter-option">
+                    <label for="religious-affiliation">Faith: </label>
+                    <select name="religious-affiliation" id="religious-affiliation">
+                        <option value="any" selected="">Any</option>
+                        <option value="community">Secular</option>
+                        <option value="coe">Church of England</option>
+                        <option value="catholic">Catholic</option>
+                        <option value="jewish">Jewish</option>
+                        <option value="muslim">Muslim</option>
+                    </select>
+                </div>
+
+            </form>
+        </div>
+    </div>
+    <div th:if="${currentUser}"
+         id="user-properties"
+         class="hidden"
+         th:data-user-id="${currentUser.id}"
+         th:data-latitude="${currentUser.latitude}"
+         th:data-longitude="${currentUser.longitude}">
+    </div>
+
+    <script>
+        const protocol = window.location.protocol;
+        const root = window.location.host;
+        const user = document.getElementById('user-properties');
+        const filterOptions = document.getElementById('filter-options');
+
+        const defaultCoordinates = [-0.118092, 51.509865]; // London
+        let homeCoordinates = defaultCoordinates;
+
+        let map = null;
+        const schoolMarkers = [];
+
+        function updateHomeCoordinates(newCoordinates) {
+            homeCoordinates = newCoordinates;
+            updateMarkerColors();
+        }
+
+        function getSavedCoordinates() {
+            if (!user) {
+                console.log('Unable to load saved coordinates: user not logged in');
+                return null;
+            } else {
+                const userLongitude = user.dataset.longitude;
+                const userLatitude = user.dataset.latitude;
+                if (userLongitude && userLatitude) {
+                    homeCoordinates = [userLongitude, userLatitude];
+                    return homeCoordinates;
+                } else {
+                    return null;
+                }
+            }
+        }
+
+        function updateGeodata(address, latitude, longitude) {
+            updateHomeCoordinates([longitude, latitude]);
+            if (!user) {
+                console.log('Unable to update geodata: user not logged in');
+                return;
+            }
+            const userId = user.dataset.userId
+            fetch(`${protocol}//${root}/users/geodata`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    "address": address,
+                    "latitude": latitude,
+                    "longitude": longitude
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {throw new Error(err.message || "Server error")});
+                } else {
+                    console.log('User geodata updated');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating geodata:', error);
+            });
+        }
+
+        function fetchCoordinatesFromBrowser() {
+            return new Promise((resolve, reject) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            homeCoordinates = [position.coords.longitude, position.coords.latitude];
+                            updateGeodata(null, position.coords.latitude, position.coords.longitude);
+                            resolve(homeCoordinates);
+                        },
+                        (error) => {
+                            console.error('User refused to share location:', error);
+                            resolve(defaultCoordinates);
+                        }
+                    );
+                } else {
+                    resolve(defaultCoordinates);
+                }
+            });
+        }
+
+        function parseCatchmentData(catchmentData, distance) {
+            let offerCount = 0;
+            let totalRadius = 0;
+            const defaultRadius = 1; // default to 1 mi. when under-subscribed
+            catchmentData.forEach(element => {
+                totalRadius += element.radius < 0 ? defaultRadius : element.radius;
+                if (element.radius < 0 || distance < element.radius) {
+                    offerCount++;
+                }
+            });
+            return [totalRadius / catchmentData.length, [offerCount, catchmentData.length]];
+        }
+
+        function getMarkerRadiusColor(offerRatio) {
+            const offers = offerRatio[0];
+            const years = offerRatio[1];
+
+            if (offers === years) {
+                return '#006B3D';
+            } else if (offers === 0) {
+                return '#D3212C';
+            } else {
+                return '#FF980E';
+            }
+        }
+
+        function updateLayer(map, source, offerRatio) {
+            const color = getMarkerRadiusColor(offerRatio);
+            map.setPaintProperty(source, 'fill-color', color);
+            map.setPaintProperty(source, 'fill-outline-color', color);
+        }
+
+        function addHoverListenerToMarker(marker, source) {
+            const markerElement = marker.getElement();
+
+            markerElement.addEventListener('mouseenter', () => {
+                map.setLayoutProperty(source, 'visibility', 'visible');
+            });
+
+            markerElement.addEventListener('mouseleave', () => {
+                map.setLayoutProperty(source, 'visibility', 'none');
+            });
+        }
+
+        function addMarkerRadius(map, marker, radius, offerRatio, schoolId) {
+            const center = marker.getLngLat().toArray();
+            const options = {steps: 64, units: 'miles', properties: {}};
+            const circle = turf.circle(center, radius, options);
+            const color = getMarkerRadiusColor(offerRatio);
+            const source = `marker-radius-${schoolId}`;
+
+            map.addSource(source, {
+                type: 'geojson',
+                data: circle
+            });
+
+            map.addLayer({
+                'id': source,
+                'type': 'fill',
+                'source': source,
+                'paint': {
+                    'fill-color': color, // 25% opacity
+                    'fill-outline-color': color, // 50% opacity
+                    'fill-opacity': 0.25
+                }
+            });
+
+            map.setLayoutProperty(source, 'visibility', 'none'); // Hide the circle by default
+            addHoverListenerToMarker(marker, source);
+        }
+
+        function getFilterCriteria() {
+            return {
+                ages: document.getElementById('ages').value,
+                gender: document.getElementById('gender').value,
+                rating: parseInt(document.getElementById('ofsted-rating').value),
+                affiliation: document.getElementById('religious-affiliation').value
+            }
+        }
+
+        function truncateString(string, length) {
+            if (string.length > length + 2) {
+                return string.substring(0, length) + "...";
+            } else {
+                return string;
+            }
+        }
+
+        function getMarkerColor(school) {
+            switch(school.ofstedRating) {
+                case 4: return '#006B3D';
+                case 3: return '#84DB0B';
+                case 2: return '#FF980E';
+                case 1: return '#D3212C';
+                default: return 'purple';
+            }
+        }
+
+        function formatPopup(school) {
+            return `
+            <div class="popup-title">
+                <p><a href="${protocol}//${root}/schools/${school.id}"><strong>${truncateString(school.name, 32)}</strong></a></p>
+                <p>${school.address}</p>
+            </div>
+            <p>${school.type.charAt(0).toUpperCase() + school.type.slice(1)} · ${school.gender.charAt(0).toUpperCase() + school.gender.slice(1)}</p>
+            <p>${school.religiousAffiliation === 'coe' ? 'Church of England' : school.religiousAffiliation === 'community' ? 'Community school' : school.religiousAffiliation.charAt(0).toUpperCase() + school.religiousAffiliation.slice(1)}</p>
+            <p><a href="${school.website}">${truncateString(school.website, 32)}</a></p>
+            <a href="${protocol}//${root}/schools/${school.id}" class="action-button"><i class="fa-solid fa-angle-right"></i></a>
+            `
+        }
+
+        async function initializeMap() {
+            mapboxgl.accessToken = document.getElementById('map').dataset.mapboxToken;
+            const coordinates = getSavedCoordinates() ?? await fetchCoordinatesFromBrowser();
+
+            const map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/daniel-sussman/cm4lg2w2d000d01sa6azz3ah1',
+                center: coordinates,
+                zoom: 15.5
+            });
+
+            const homeElement = document.createElement('div');
+            homeElement.innerHTML = '<img src="/images/home.svg" alt="Home Icon" fill="blue" width="40" height="40">';
+
+            const homeMarker = new mapboxgl.Marker(homeElement) // initialize a new marker
+                .setLngLat(coordinates)
+                .addTo(map);
+
+            const geocoder = new MapboxGeocoder({
+                accessToken: mapboxgl.accessToken, // Set the access token
+                mapboxgl: mapboxgl, // Set the mapbox-gl instance
+                marker: false, // Do not use the default marker style
+                placeholder: 'Find schools near...',
+                bbox: [-0.489, 51.28, 0.236, 51.686], // Boundary for London
+                proximity: {
+                    longitude: -0.118092,
+                    latitude: 51.509865
+                } // Coordinates for Islington
+            });
+
+            map.addControl(geocoder, 'top-left');
+
+            geocoder.on('result', (event) => {
+                const newAddress = event.result.place_name;
+                const newCoordinates = event.result.geometry.coordinates;
+                updateGeodata(newAddress, newCoordinates[1], newCoordinates[0]);
+                homeMarker.setLngLat(newCoordinates);
+
+                map.flyTo({
+                    center: newCoordinates,
+                    zoom: 15.5
+                });
+            });
+
+            return map;
+        }
+
+        async function updateSchoolMarkers() {
+            const filterCriteria = getFilterCriteria();
+
+            schoolMarkers.forEach(marker => marker.remove());
+            const radii = [];
+
+            fetch(`${protocol}//${root}/schools/api`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(filterCriteria)
+            })
+            .then(response => response.json())
+            .then(schools => {
+                schools.forEach(school => {
+                    const popup = new mapboxgl.Popup({
+                        closeButton: false,
+                        offset: 25,
+                    })
+                    .setHTML(formatPopup(school));
+
+                    const coords = [school.longitude, school.latitude];
+                    const marker = new mapboxgl.Marker({ color: getMarkerColor(school) }) // initialize a new marker
+                        .setLngLat(coords)
+                        .setPopup(popup)
+                        .addTo(map);
+
+                    schoolMarkers.push(marker);
+                    if (school.catchmentRadius) {
+                        const distance = turf.distance(homeCoordinates, [school.longitude, school.latitude], { units: 'miles' });
+                        const [avgRadius, offerRatio] = parseCatchmentData(school.catchmentRadius, distance);
+                        radii.push([marker, avgRadius, offerRatio, school.id]);
+                    }
+                });
+
+                if (map.loaded()) {
+                    radii.forEach(radius => {
+                        const [marker, avgRadius, offerRatio, schoolId] = radius;
+                        const source = `marker-radius-${schoolId}`;
+                        addHoverListenerToMarker(marker, source);
+                    });
+                } else {
+                    map.on('load', () => {
+                        radii.forEach(radius => {
+                            const [marker, avgRadius, offerRatio, schoolId] = radius;
+                            addMarkerRadius(map, marker, avgRadius, offerRatio, schoolId);
+                        });
+                    });
+                }
+            });
+        }
+
+        async function updateMarkerColors() {
+            console.log('updating marker colors...');
+            const filterCriteria = getFilterCriteria();
+            const radii = [];
+
+            fetch(`${protocol}//${root}/schools/api`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(filterCriteria)
+            })
+            .then(response => response.json())
+            .then(schools => {
+                schools.forEach(school => {
+                    if (school.catchmentRadius) {
+                        const distance = turf.distance(homeCoordinates, [school.longitude, school.latitude], { units: 'miles' });
+                        const [avgRadius, offerRatio] = parseCatchmentData(school.catchmentRadius, distance);
+                        radii.push([avgRadius, offerRatio, school.id]);
+                    }
+                });
+                radii.forEach(radius => {
+                    const [avgRadius, offerRatio, schoolId] = radius;
+                    const source = `marker-radius-${schoolId}`;
+                    updateLayer(map, source, offerRatio);
+                });
+            });
+        }
+
+        map = initializeMap()
+        .then(loadedMap => {
+            map = loadedMap;
+            updateSchoolMarkers();
+            filterOptions.addEventListener("change", updateSchoolMarkers);
+        });
+
+    </script>
+
+</body>
+</html>
